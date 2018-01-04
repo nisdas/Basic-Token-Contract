@@ -1,95 +1,106 @@
 pragma solidity ^0.4.16;
 
-contract token{
+/**
+ * @title SafeMath
+ * @dev Math operations with safety checks that throw on error
+ */
+library SafeMath {
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    if (a == 0) {
+      return 0;
+    }
+    uint256 c = a * b;
+    assert(c / a == b);
+    return c;
+  }
 
-    
-    uint256 public totalSupply;
-    string public tokenSymbol;
-    string public tokenName;
-    uint256 public decimals = 18;
-    uint256 public buyprice;
-    uint256 public sellprice;
-    address public owner;
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+  }
 
-    mapping(address => uint) public tokenBalance;
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
 
-    event Transfer(address from, address to, uint256 value);
-    event Burn(address from, uint256 value, uint256 ttlsupply);
-    modifier onlyOwner{
-        require(msg.sender == owner);
-        _;
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
+contract ERC20 {
+  uint256 public totalSupply;
+  function balanceOf(address who) public view returns (uint256);
+  function transfer(address to, uint256 value) public returns (bool);
+  event Transfer(address indexed from, address indexed to, uint256 value);
+  function allowance(address owner, address spender) public view returns (uint256);
+  function transferFrom(address from, address to, uint256 value) public returns (bool);
+  function approve(address spender, uint256 value) public returns (bool);
+  event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+contract token is ERC20 {
+
+    using SafeMath for uint256;
+
+    mapping(address => uint256) balances;
+    mapping (address => mapping (address => uint256)) internal allowed;
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+
+
+    function token( uint256 _initialAmount, string _tokenName, string _tokenSymbol, uint8 _decimals) public {
+        balances[msg.sender] = _initialAmount;               
+        totalSupply = _initialAmount;                        
+        name = _tokenName;                                                               
+        symbol = _tokenSymbol; 
+        decimals = _decimals;                              
     }
 
-    function token(uint256 initialsupply, string symbol, string name, uint256 buyPrice, uint256 sellPrice) public {
 
-        totalSupply = initialsupply * 10**decimals;
-        tokenBalance[msg.sender] = totalSupply;
-        tokenSymbol = symbol;
-        tokenName = name;
-        buyprice = buyPrice;
-        sellprice = sellPrice;
-        require(buyprice >= sellprice);
-        owner = msg.sender;
-    
-
-
-
+    function balanceOf(address who) public view returns (uint256) {
+        return balances[who];
     }
 
-    function internalTransfer(address from, address to, uint256 value ) internal {
-        require(to != 0x0);
-        require(tokenBalance[from] >= value);
-        uint256 sumofToken = tokenBalance[from] + tokenBalance[to];
-        tokenBalance[from] -= value;
-        tokenBalance[to] += value;
-        require(sumofToken == tokenBalance[from] + tokenBalance[to]);
-        Transfer(from,to,value);
-    }
+      function transfer(address _to, uint256 _value) public returns (bool) {
+    require(_to != address(0));
+    require(_value <= balances[msg.sender]);
 
-    function transfer(address to, uint256 value) public {
-        internalTransfer(msg.sender,to,value);
-    }
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    Transfer(msg.sender, _to, _value);
+    return true;
+  }
 
-    function burn(uint256 value) public returns (bool result) {
-        require(tokenBalance[msg.sender] >= value);
-        tokenBalance[msg.sender] -= value;
-        totalSupply -= value;
-        Burn(msg.sender,value,totalSupply);
-        return true;
+   function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
+    require(_to != address(0));
+    require(_value <= balances[_from]);
+    require(_value <= allowed[_from][msg.sender]);
 
-    }
+    balances[_from] = balances[_from].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+    Transfer(_from, _to, _value);
+    return true;
+  }
 
-    function setPrice(uint256 newbuyprice, uint256 newsellprice) onlyOwner public returns(bool result) {
-        require(newbuyprice > newsellprice);
-        buyprice = newbuyprice;
-        sellprice = newsellprice;
-        return true;
+  function approve(address _spender, uint256 _value) public returns (bool) {
+    allowed[msg.sender][_spender] = _value;
+    Approval(msg.sender, _spender, _value);
+    return true;
+  }
 
-    }
-
-    function buytokens() payable public returns(bool result) {
-        require(msg.value <= msg.sender.balance);
-        require(msg.value/buyprice <= tokenBalance[owner]);
-        uint256 amount = msg.value/buyprice;
-        internalTransfer(owner, msg.sender,amount);
-        return true;
-        
-        }
-
-    function selltokens(uint256 amount)  public returns(bool result) {
-        require(tokenBalance[msg.sender] >= amount);
-        uint256 totalValue = amount * sellprice;
-        require(this.balance >= totalValue);
-        internalTransfer(msg.sender,this,amount);
-        this.transfer(totalValue);
-        return true;
+  function allowance(address _owner, address _spender) public view returns (uint256) {
+    return allowed[_owner][_spender];
+  } 
 
 
-    }
-
-    function () payable public {
-
-    }
 
     
 }

@@ -7,8 +7,9 @@
     "Basic-Token-Contract": "Basic-Token-Contract"
   },
   "dependencies": {
+    "solc": "^0.4.19",
     "web3": "^1.0.0-beta.26",
-    "solc": "^0.4.19"
+    "zeppelin-solidity": "^1.5.0"
   },
   "devDependencies": {},
   "scripts": {},
